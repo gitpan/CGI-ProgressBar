@@ -1,0 +1,136 @@
+CGI/ProgressBar version 0.01
+============================
+
+NAME
+    CGI::ProgressBar - CGI.pm sub-class with a progress bar object
+
+SYNOPSIS
+            use lib '..';
+
+            use CGI::ProgressBar qw/:standard/;
+            $| = 1; # Do not buffer output
+
+            print header,
+                    start_html('A Simple Example'),
+                    h1('A Simple Example'),
+                    p('This example will fill the screen with nonsense between updates to a progress bar.'),
+                    progress_bar( -from=>1, -to=>10 );
+
+            for (1..10){
+                    print update_progress_bar;
+                    # Simulate being busy:
+                    print rand>0.5 ? chr 47 : chr 92 for 0 .. 100000;
+            }
+            print hide_progress_bar;
+            print p('All done.');
+            print end_html;
+            exit;
+
+EXPORT
+            progress_bar
+            update_progress_bar
+            hide_progress_bar
+
+DESCRIPTION
+    This ALPHA module provides a progress bar for web browsers.
+
+    It aims to require that the recipient client have a minimum of
+    JavaScript 1.0, HTML 4.0, ancd CSS/1, but this has yet to be tested.
+
+    All feedback would be most welcome.
+
+USE
+    The module sub-classes CGI.pm, providing three additional methods (or
+    functions, depending on your taste), each of which are detailed below.
+    These should be treated as any other CGI.pm HTML-producing routine with
+    the exception that the arguments should be supplied as in OOP form
+    without preceding dashes. In other words:
+
+            my $html = $query->progress_bar;
+            my $html = progress_bar;
+            my $html = progress_bar(from=>1, to=>10);
+            my $html = $query->progress_bar(from=>1, to=>10);
+
+    This will probably change if someone would like it to.
+
+progress_bar
+    Returns mark-up that instantiates a progress bar. Currently that is HTML
+    and JS, but perhaps the JS ought to go into the head.
+
+    The progress bar itself is an object in this class, stored in the
+    calling ("CGI") object - specifically in the field "progress_bar", which
+    we create as an array.
+
+    from
+    to  Values which the progress bar spans. Defaults: 0, 100.
+
+    width
+    height
+        The width and height of the progress bar, in pixels. Cannot accept
+        percentages (yet). Defaults: 400, 20.
+
+    blocks
+        The number of blocks to appear in the progress bar. Default: 100.
+
+    gap The amount of space between blocks, in pixels. Default: 1.
+
+    colors
+                -colors => [ 0, 'green', 50, 'red' ]
+
+        Sorry about the US spelling.
+
+    label
+
+update_progress_bar
+        Updates the progress bar.
+
+hide_progress_bar
+	Hides the progress bar.
+
+INSTALLATION
+
+To install this module type the following:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+	CGI.pm
+
+BUGS, CAVEATS, TODO
+        Parameter passing doesn't match CGI.pm
+            But it will in the next release if you ask me for it.
+
+        "colors" not implimented
+            I'd like to see here something like the
+            "Tk::ProgressBar::colors"; not because I've ever used it, but
+            because it might be cool.
+
+        Horizontal Display Only
+            You can get around this by adjusting the CSS, but you'd rather
+            not. And even if you did, the use of "-label" might not look
+            very nice. So the next version will support an "-orientation"
+            option.
+
+        Inline CSS and JS
+            Because it's easiest for me. I suppose some kind of over-loading
+            of the "CGI::start_html" would be possible, but then I'd have to
+            check it, and maybe update it, every time CGI.pm was updated,
+            which I don't fancy.
+
+SEE ALSO
+        perl. CGI, Tk::ProgressBar,
+
+AUTHOR
+        Lee Goddard <lgoddard -at- cpan -dot- org>
+
+COPYRIGHT
+        Copyright (C) Lee Goddard, 2002-2003. All Rights Reserved. This
+        software is made available under the same terms as Perl itself. You
+        may use and redistribute this software under the same terms as Perl
+        itself.
