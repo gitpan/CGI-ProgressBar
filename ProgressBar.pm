@@ -51,7 +51,7 @@ use warnings;
 =cut
 
 BEGIN {
-	our $VERSION = '0.02';
+	our $VERSION = '0.03';
 	use CGI::Util; # qw(rearrange);
 	use base 'CGI';
 
@@ -165,6 +165,7 @@ The digits being updated as the bar progresses, if the option is enabled.
 
 =cut
 
+our $CSS = '';
 
 sub progress_bar {
     local $_;
@@ -264,51 +265,38 @@ are used here, and the whole appears centred within a C<table>.
 =cut
 
 sub CGI::_pb_init { my $self = shift;
+	my $html = "";
 	# my $pb = $self->{progress_bar}[$#{$self->{progress_bar}}];
-	my $pb = $self->{progress_bar};
-	my $block_wi = int( ($pb->{width}-($pb->{gap}*$pb->{blocks})) /$pb->{blocks})-1;
-	$block_wi = 1 if $block_wi < 1;
-	$pb->{layer_id} = {
+
+	$self->{block_wi} = int( ($self->{progress_bar}->{width}-($self->{progress_bar}->{gap}*$self->{progress_bar}->{blocks})) /$self->{progress_bar}->{blocks})-1;
+	$self->{block_wi} = 1 if not $self->{block_wi} or $self->{block_wi} < 1 ;
+	$self->{progress_bar}->{layer_id} = {
 		container	=> 'pb_cont'.time,
 		form		=> 'pb_form'.time,
 		block		=> 'b'.time,
 		number		=> 'n'.time,
 	};
+	$self->CGI::_init_css;
 
-	my $html = "<style type='text/css'>
-	.pblib_bar {
-		width: $pb->{width} px;
-	}
-	.pblib_block {
-		width: ".($block_wi)."px;
-		height: ".$pb->{height}."px;
-		margin-right:$pb->{gap}px;
-	}";
-	if ($pb->{label}){
-		$html .=".pblib_number {
-		border:none;
-		text-align:right
-		}";
-	}
-	$html .="\n</style>\n";
-	$html .= "\n<!-- begin progress bar $pb->{layer_id}->{container} -->" if $^W;
-	$html .= "\n<div id='$pb->{layer_id}->{container}'>\n";
-	$html .= "\t<table>\n\t<tr><td><table align='center'><tr><td>" if $pb->{label};
+
+	$html .= "\n<!-- begin progress bar $self->{progress_bar}->{layer_id}->{container} -->" if $^W;
+	$html .= "\n<div id='$self->{progress_bar}->{layer_id}->{container}'>\n";
+	$html .= "\t<table>\n\t<tr><td><table align='center'><tr><td>" if $self->{progress_bar}->{label};
 
 	$html .= "\t<div class='pblib_bar'>\n\t";
-	foreach my $i (1 .. $pb->{blocks}){
-		$html .= "<span class='pblib_block' id='$pb->{layer_id}->{block}$i'></span>";
+	foreach my $i (1 .. $self->{progress_bar}->{blocks}){
+		$html .= "<span class='pblib_block' id='$self->{progress_bar}->{layer_id}->{block}$i'></span>";
 	}
 	$html .= "\n\t</div>\n";
 	$html .= "</td></tr>\n<tr><td align='center'>
-		<form name='$pb->{layer_id}->{form}' action='noneEver'>
-			<input name='$pb->{layer_id}->{number}' type='text' size='6' value='0' class='pblib_number'
-			/><span class='pblib_number'>/$pb->{to}</span>
+		<form name='$self->{progress_bar}->{layer_id}->{form}' action='noneEver'>
+			<input name='$self->{progress_bar}->{layer_id}->{number}' type='text' size='6' value='0' class='pblib_number'
+			/><span class='pblib_number'>/$self->{progress_bar}->{to}</span>
 		</form>
 		</td></tr></table>
-		</td></tr></table>" if $pb->{label};
+		</td></tr></table>" if $self->{progress_bar}->{label};
 	$html .= "</div>\n";
-	$html .="<!-- end progress bar $pb->{layer_id}->{container} -->\n\n" if $^W;
+	$html .="<!-- end progress bar $self->{progress_bar}->{layer_id}->{container} -->\n\n" if $^W;
 	$html .= "\n<script language='javascript' type='text/javascript'>\n// <!--";
 	$html .= "\t progress bar produced by ".__PACKAGE__." at ".scalar(localtime)."\n" if $^W;
 	$html .= "
@@ -316,21 +304,40 @@ sub CGI::_pb_init { my $self = shift;
 	var pblib_at;
 	pblib_progress_clear();
 	function pblib_progress_clear() {
-		for (var i = 1; i <= $pb->{blocks}; i++)
-			document.getElementById('$pb->{layer_id}->{block}'+i).style.backgroundColor='transparent';
-		pblib_at = ".($pb->{from}).";
+		for (var i = 1; i <= $self->{progress_bar}->{blocks}; i++)
+			document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).style.backgroundColor='transparent';
+		pblib_at = ".($self->{progress_bar}->{from}).";
 	}
 	function pblib_progress_update() {
-		pblib_at += $pb->{interval};
-		if (pblib_at > $pb->{blocks})
+		pblib_at += $self->{progress_bar}->{interval};
+		if (pblib_at > $self->{progress_bar}->{blocks})
 			pblib_progress_clear();
 		else {
 			for (var i = 1; i <= Math.ceil(pblib_at); i++)
-				document.getElementById('$pb->{layer_id}->{block}'+i).style.backgroundColor = progressColor;\n";
-	$html .= "document.".$pb->{layer_id}->{form}.".".$pb->{layer_id}->{number}.".value++\n" if $pb->{label};
+				document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).style.backgroundColor = progressColor;\n";
+	$html .= "document.".$self->{progress_bar}->{layer_id}->{form}.".".$self->{progress_bar}->{layer_id}->{number}.".value++\n" if $self->{progress_bar}->{label};
 	$html .= "\t\t}\n\t}\n//-->\n</script>\n";
 
 	return $html;
+}
+
+sub CGI::_init_css { my $self = shift;
+	$CSS = "
+	.pblib_bar {
+		width: ".$self->{progress_bar}->{width}." px;
+	}
+	.pblib_block {
+		width: ".($self->{block_wi})."px;
+		height: ".$self->{progress_bar}->{height}."px;
+		margin-right:".$self->{progress_bar}->{gap}."px;
+	}";
+	if ($self->{progress_bar}->{label}){
+		$CSS .=".pblib_number {
+		border:none;
+		text-align:right
+		}";
+	}
+	$self->{css} = $CSS;
 }
 
 =head1 BUGS, CAVEATS, TODO

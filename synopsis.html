@@ -3,34 +3,16 @@
 	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 	 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US"><head><title>A Simple Example</title>
-</head><body><h1>A Simple Example</h1><p>This example will fill the screen with nonsense between updates to a progress bar.</p><style type='text/css'>
-	.pblib_bar {
-		font-size:8pt;
-		padding:2px;
-		border:solid black 1px;
-		width: 400 px;
-		text-align:center;
-	}
-	.pblib_block {
-		width: 38px;
-		height: 20px;
-		margin-right:1px;
-	}.pblib_number {
-		font-family:none;
-		border:none;
-		text-align:right
-		}
-</style>
-
-<div id='pb_cont1057339256'>
+</head><body><h1>A Simple Example</h1><p>This example will fill the screen with nonsense between updates to a progress bar.</p>
+<div id='pb_cont1092237513'>
 	<table>
 	<tr><td><table align='center'><tr><td>	<div class='pblib_bar'>
-	<span class='pblib_block' id='b10573392561'></span><span class='pblib_block' id='b10573392562'></span><span class='pblib_block' id='b10573392563'></span><span class='pblib_block' id='b10573392564'></span><span class='pblib_block' id='b10573392565'></span><span class='pblib_block' id='b10573392566'></span><span class='pblib_block' id='b10573392567'></span><span class='pblib_block' id='b10573392568'></span><span class='pblib_block' id='b10573392569'></span><span class='pblib_block' id='b105733925610'></span>
+	<span class='pblib_block' id='b10922375131'></span><span class='pblib_block' id='b10922375132'></span><span class='pblib_block' id='b10922375133'></span><span class='pblib_block' id='b10922375134'></span><span class='pblib_block' id='b10922375135'></span><span class='pblib_block' id='b10922375136'></span><span class='pblib_block' id='b10922375137'></span><span class='pblib_block' id='b10922375138'></span><span class='pblib_block' id='b10922375139'></span><span class='pblib_block' id='b109223751310'></span>
 	</div>
 </td></tr>
 <tr><td align='center'>
-		<form name='pb_form1057339256' action='noneEver'>
-			<input name='n1057339256' type='text' size='6' value='0' class='pblib_number'
+		<form name='pb_form1092237513' action='noneEver'>
+			<input name='n1092237513' type='text' size='6' value='0' class='pblib_number'
 			/><span class='pblib_number'>/10</span>
 		</form>
 		</td></tr></table>
@@ -43,7 +25,7 @@
 	pblib_progress_clear();
 	function pblib_progress_clear() {
 		for (var i = 1; i <= 10; i++)
-			document.getElementById('b1057339256'+i).style.backgroundColor='transparent';
+			document.getElementById('b1092237513'+i).style.backgroundColor='transparent';
 		pblib_at = 1;
 	}
 	function pblib_progress_update() {
@@ -52,8 +34,8 @@
 			pblib_progress_clear();
 		else {
 			for (var i = 1; i <= Math.ceil(pblib_at); i++)
-				document.getElementById('b1057339256'+i).style.backgroundColor = progressColor;
-document.pb_form1057339256.n1057339256.value++
+				document.getElementById('b1092237513'+i).style.backgroundColor = progressColor;
+document.pb_form1092237513.n1092237513.value++
 		}
 	}
 //-->
@@ -62,47 +44,44 @@ document.pb_form1057339256.n1057339256.value++
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
+//<script type='text/javascript'>//<!--
 	pblib_progress_update()
 //-->
 </script>
-<script type='text/javascript'>//<!--
-	pb_cont1057339256.style.display='none';
+//<script type='text/javascript'>//<!--
+	pb_cont1092237513.style.display='none';
 //-->
 </script>
 <p>All done.</p></body></html>
-
-</body>
-</html>

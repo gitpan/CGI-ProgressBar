@@ -14,6 +14,8 @@ BEGIN { plan tests => 11, todo => [9,] };
 use CGI::ProgressBar qw/:standard/;
 ok(1); # If we made it this far, we're ok.
 
+die "Old verseion" if $CGI::ProgressBar::VERSION != "0.03";
+
 #goto TEST11; #############
 
 my $query;
@@ -57,7 +59,6 @@ ok( $1, $blocks);
 
 # 12
 ok( defined hide_progress_bar, 1);
-
 
 
 
