@@ -17,11 +17,11 @@ CGI::ProgressBar - CGI.pm sub-class with a progress bar object
 		start_html('A Simple Example'),
 		h1('A Simple Example'),
 		p('This example will fill the screen with nonsense between updates to a progress bar.'),
-		progress_bar( -from=>1, -to=>$steps );
+		progress_bar( -from=>1, -to=>$steps, -blocks=>$steps );
 
 	for (1..$steps){
 		print update_progress_bar;
-		# Simulate being busy:
+		# Simulate being busy/sleep 2;
 		print rand>0.5 ? chr 47 : chr 92 for 0 .. 100000;
 	}
 	print hide_progress_bar;
@@ -51,8 +51,8 @@ use warnings;
 =cut
 
 BEGIN {
-	our $VERSION = '0.01';
-	use CGI::Util qw(rearrange );
+	our $VERSION = '0.02';
+	use CGI::Util; # qw(rearrange);
 	use base 'CGI';
 
 =head2 EXPORT
@@ -89,6 +89,8 @@ other words, the following are all the same:
 
 This will probably change if someone would like it to.
 
+=head1 FUNCTIONS/METHODS
+
 =head2 FUNCTION/METHOD progress_bar
 
 Returns mark-up that instantiates a progress bar.
@@ -109,6 +111,11 @@ an array.
 Values which the progress bar spans.
 Defaults: 0, 100.
 
+=item blocks
+
+The number of blocks to appear in the progress bar.
+Default: 100. You probably want to link this to C<from> and C<to>.
+
 =item width
 
 =item height
@@ -116,11 +123,6 @@ Defaults: 0, 100.
 The width and height of the progress bar, in pixels. Cannot accept
 percentages (yet).
 Defaults: 400, 20.
-
-=item blocks
-
-The number of blocks to appear in the progress bar.
-Default: 100.
 
 =item gap
 
@@ -131,6 +133,35 @@ Default: 1.
 
 Supply this parameter with a true value to have a numerical
 display of progress.
+
+=item layer_id
+
+Most HTML elements on the page have C<id> attributes. These
+can be accessed through the C<layer_id> field, which is a hash
+with the follwoing keys relating to the C<id> value:
+
+=over 4
+
+=item form
+
+The C<form> which contains everything we display.
+
+=item container
+
+The C<div> containing everything we display.
+
+=item block
+
+This value is used as a prefixed for the C<id> of each block of the bar,
+with the suffix being a number incremented from C<1>.
+
+=item number
+
+The digits being updated as the bar progresses, if the option is enabled.
+
+=back
+
+=back
 
 =cut
 
@@ -265,7 +296,7 @@ sub CGI::_pb_init { my $self = shift;
 	$html .= "\t<table>\n\t<tr><td><table align='center'><tr><td>" if $pb->{label};
 
 	$html .= "\t<div class='pblib_bar'>\n\t";
-	foreach my $i (1..$pb->{blocks}){
+	foreach my $i (1 .. $pb->{blocks}){
 		$html .= "<span class='pblib_block' id='$pb->{layer_id}->{block}$i'></span>";
 	}
 	$html .= "\n\t</div>\n";
@@ -355,5 +386,17 @@ HTML, CGI, progress bar, widget
 =head1 SEE ALSO
 
 L<perl>. L<CGI>, L<Tk::ProgressBar>,
+
+=head1 MODIFICATIONS
+
+B<25 March 2004>
+
+=over 4
+
+=item *
+
+Updated the POD
+
+=back
 
 =cut
