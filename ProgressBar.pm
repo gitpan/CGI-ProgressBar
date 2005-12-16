@@ -6,24 +6,28 @@ CGI::ProgressBar - CGI.pm sub-class with a progress bar object
 
 =head1 SYNOPSIS
 
-	use lib '..';
-
+	use strict;
+	use warnings;
 	use CGI::ProgressBar qw/:standard/;
 	$| = 1;	# Do not buffer output
-
-	my $steps = 10;
-
 	print header,
-		start_html('A Simple Example'),
+		start_html(
+			-title=>'A Simple Example',
+			-style=>{
+				-src  => '', # You can override the bar style here
+				-code => '', # or inline, here.
+			}
+		),
 		h1('A Simple Example'),
-		p('This example will fill the screen with nonsense between updates to a progress bar.'),
-		progress_bar( -from=>1, -to=>$steps, -blocks=>$steps );
-
-	for (1..$steps){
+		p('This example will update a JS/CSS progress bar.'),
+		progress_bar( -from=>1, -to=>100 );
+	# We're set to go.
+	for (1..10){
 		print update_progress_bar;
-		# Simulate being busy/sleep 2;
-		print rand>0.5 ? chr 47 : chr 92 for 0 .. 100000;
+		# Simulate being busy:
+		sleep 1;
 	}
+	# Now we're done, get rid of the bar:
 	print hide_progress_bar;
 	print p('All done.');
 	print end_html;
@@ -31,7 +35,8 @@ CGI::ProgressBar - CGI.pm sub-class with a progress bar object
 
 =head1 DESCRIPTION
 
-This module provides a progress bar for web browsers.
+This module provides a progress bar for web browsers, to keep end-users occupied when otherwise
+nothing would appear to be happening.
 
 It aims to require that the recipient client have a minimum
 of JavaScript 1.0, HTML 4.0, ancd CSS/1, but this has yet to be tested.
@@ -51,7 +56,7 @@ use warnings;
 =cut
 
 BEGIN {
-	our $VERSION = '0.03';
+	our $VERSION = '0.04';
 	use CGI::Util; # qw(rearrange);
 	use base 'CGI';
 
@@ -77,6 +82,8 @@ functions, depending on your taste), each of which are detailed below.
 
 Simply replace your "use CGI qw//;" with "use CGI::ProgressBar qw//;".
 
+Make sure you are aware of your output buffer size: C<$|=$smothingsmall>.
+
 Treat each new function as any other CGI.pm HTML-producing routine with
 the exception that the arguments should be supplied as in OOP form. In
 other words, the following are all the same:
@@ -99,8 +106,8 @@ ought to go into the head.
 
 The progress bar itself is an object in this class,
 stored in the calling (C<CGI>) object - specifically
-in the field C<progress_bar>, which we create as
-an array.
+in the field C<progress_bar>, which we create.
+(TODO: Make this field an array to allow multiple bars per page.)
 
 =over 4
 
@@ -111,34 +118,40 @@ an array.
 Values which the progress bar spans.
 Defaults: 0, 100.
 
-=item blocks
+=item orientation
 
-The number of blocks to appear in the progress bar.
-Default: 100. You probably want to link this to C<from> and C<to>.
+If set to C<vertical> displays the bar as a strip down the screen; otherwise,
+places it across the screen.
 
 =item width
 
 =item height
 
 The width and height of the progress bar, in pixels. Cannot accept
-percentages (yet).
-Defaults: 400, 20.
+percentages (yet). Defaults: 400, 20, unless you specify C<orientation>
+as C<vertical>, in which case this is reversed.
 
-=item gap
+=item blocks
 
-The amount of space between blocks, in pixels.
-Default: 1.
+The number of blocks to appear in the progress bar.
+Default: 10. You probably want to link this to C<from> and C<to>
+or better still, leave it well alone: it may have been a mistake to even include it.
+C<steps> is an alias for this attribute.
 
 =item label
 
 Supply this parameter with a true value to have a numerical
-display of progress.
+display of progress. Default is not to display it.
 
 =item layer_id
 
 Most HTML elements on the page have C<id> attributes. These
 can be accessed through the C<layer_id> field, which is a hash
 with the follwoing keys relating to the C<id> value:
+
+=item mycss
+
+Custom CSS to be written inline (ugh) after any system CSS.
 
 =over 4
 
@@ -173,19 +186,12 @@ sub progress_bar {
     ($self,@_) = &CGI::self_or_default(@_);
 
 	my $pb = bless {
-		from	=> 0,		to		=> 100,	width	=> '400',
-		height	=> '20',	blocks	=> 10,	gap		=> '1',
-		label	=> 1,		colors	=> [100,'blue'],
+		_updates=> 0,		debug	=> undef,
+		mycss	=> '',		orientation	=> 'horizontal',
+		from	=> 1,		to		=> 100,	width	=> '400',
+		height	=> '20',	blocks	=> 10,
+		label	=> 0,		colors	=> [100,'blue'],
 	},__PACKAGE__;
-
-	#my @arg_names = qw/from to width height blocks gap label colors/;
-	#if (@p){
-	#	my @vals = rearrange([ @arg_names ],@p);
-	#	for (0..$#arg_names){
-	#		# warn "Set arg $arg_names[$_] to ",($vals[$_] || $pb->{$arg_names[$_]}),"\t";
-	#		$pb->{$arg_names[$_]} = $vals[$_] if $vals[$_];
-	#	}
-	#}
 
 	if (ref $_[0] eq 'HASH'){	%args = %{$_[0]} }
 	elsif (not ref $_[0]){		%args = @_ }
@@ -198,18 +204,39 @@ sub progress_bar {
 		$nk =~ s/^-(.*)$/$1/;
 		$pb->{$nk} = $args{$k};
 	}
+	$pb->{blocks} = $args{steps} if $args{steps};
+
+	$pb->{orientation} = 'vertical' if $pb->{orientation} eq 'v';
+	if ($pb->{orientation} eq 'vertical'){
+		my $w = $pb->{width};
+		$pb->{width} = $pb->{height};
+		$pb->{height} = $w;
+	}
 
 	$pb->{colors}	= $pb->{colors}? {@{$pb->{colors}}} : {100=>'blue'};
 	$pb->{_length}	= $pb->{to} - $pb->{from};	# Units in the bar
-	# interval 		= $pb->{_length}>0? $pb->{blocks}/$pb->{_length} : 0;
-	$pb->{interval}	= 1;	# publicise?
+	$pb->{_interval} = 1;	# publicise?
+#	$pb->{_interval} = $pb->{_length}>0? ($pb->{_length}/$pb->{blocks}) : 0;
 
 	# IN A LATER VERSION....Store ourself in caller's progress_bar array
 	# push @{ $self->{progress_bar} },$pb;
 	$self->{progress_bar} = $pb;
 
+	for my $k (qw[ from to blocks _interval ]){
+		$pb->{$k} = int($pb->{$k});
+	}
+
+	if ($pb->{debug}){
+		require Data::Dumper; import Data::Dumper;
+		warn 'New CGI::ProgressBar '.Dumper($pb);
+		warn 'Total blocks='.($pb->{blocks});
+		warn 'Expected total calls='.($pb->{to}/$pb->{_interval});
+	}
+
 	return $self->_pb_init();
 }
+
+
 
 =head2 FUNCTION/METHOD update_progress_bar
 
@@ -218,6 +245,7 @@ Updates the progress bar.
 =cut
 
 sub update_progress_bar {
+# 	my ($self, @crud) = CGI::self_or_default;
 	return "<script type='text/javascript'>//<!--
 	pblib_progress_update()\n//-->\n</script>\n";
 }
@@ -229,15 +257,19 @@ Hides the progress bar.
 =cut
 
 sub hide_progress_bar {
-	my($self,@p) = &CGI::self_or_default(@_);
+	my ($self, @crud) = CGI::self_or_default;
 	#my $pb = $self->{progress_bar}[$#{$self->{progress_bar}}];
-	my $pb = $self->{progress_bar};
-	return
+
+	return $self->{progress_bar}?
 	"<script type='text/javascript'>//<!--
-	$pb->{layer_id}->{container}.style.display='none';\n//-->\n</script>\n";
+	$self->{progress_bar}->{layer_id}->{container}.style.display='none';\n//-->\n</script>\n"
+	: '' ;
 }
 
 =head1 CSS STYLE CLASS EMPLOYED
+
+You can add CSS to be output into the page body (ugh) in the C<mycss> field.
+Bear in mind that the width and height settings are programatically assigned.
 
 =item pblib_bar
 
@@ -250,7 +282,7 @@ The rest is up to you. A good start is:
 	border:     solid black 1px;
 	text-align: center;
 
-=item pblib_block
+=item pblib_block_off, pblib_block_on
 
 An individual block within the status bar. The following
 attributes are set dynamically: C<width>, C<height>,
@@ -264,12 +296,12 @@ are used here, and the whole appears centred within a C<table>.
 
 =cut
 
-sub CGI::_pb_init { my $self = shift;
+sub CGI::_pb_init {
+	my ($self, @crud) = CGI::self_or_default;
 	my $html = "";
 	# my $pb = $self->{progress_bar}[$#{$self->{progress_bar}}];
+	$self->{progress_bar}->{block_wi} = 1 if not $self->{progress_bar}->{block_wi} or $self->{progress_bar}->{block_wi} < 1 ;
 
-	$self->{block_wi} = int( ($self->{progress_bar}->{width}-($self->{progress_bar}->{gap}*$self->{progress_bar}->{blocks})) /$self->{progress_bar}->{blocks})-1;
-	$self->{block_wi} = 1 if not $self->{block_wi} or $self->{block_wi} < 1 ;
 	$self->{progress_bar}->{layer_id} = {
 		container	=> 'pb_cont'.time,
 		form		=> 'pb_form'.time,
@@ -277,15 +309,14 @@ sub CGI::_pb_init { my $self = shift;
 		number		=> 'n'.time,
 	};
 	$self->CGI::_init_css;
-
-
+	$html .= "<style type='text/css'>".$self->{progress_bar}->{css}."\n".$self->{progress_bar}->{mycss}."</style>\n";
 	$html .= "\n<!-- begin progress bar $self->{progress_bar}->{layer_id}->{container} -->" if $^W;
 	$html .= "\n<div id='$self->{progress_bar}->{layer_id}->{container}'>\n";
 	$html .= "\t<table>\n\t<tr><td><table align='center'><tr><td>" if $self->{progress_bar}->{label};
 
 	$html .= "\t<div class='pblib_bar'>\n\t";
 	foreach my $i (1 .. $self->{progress_bar}->{blocks}){
-		$html .= "<span class='pblib_block' id='$self->{progress_bar}->{layer_id}->{block}$i'></span>";
+		$html .= "<span class='pblib_block_off' id='$self->{progress_bar}->{layer_id}->{block}$i'>&nbsp;</span>";
 	}
 	$html .= "\n\t</div>\n";
 	$html .= "</td></tr>\n<tr><td align='center'>
@@ -300,44 +331,60 @@ sub CGI::_pb_init { my $self = shift;
 	$html .= "\n<script language='javascript' type='text/javascript'>\n// <!--";
 	$html .= "\t progress bar produced by ".__PACKAGE__." at ".scalar(localtime)."\n" if $^W;
 	$html .= "
-	var progressColor = 'navy';
-	var pblib_at;
+	var pblib_at = $self->{progress_bar}->{from};
 	pblib_progress_clear();
 	function pblib_progress_clear() {
 		for (var i = 1; i <= $self->{progress_bar}->{blocks}; i++)
-			document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).style.backgroundColor='transparent';
+			document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).className='pblib_block_off';
 		pblib_at = ".($self->{progress_bar}->{from}).";
 	}
 	function pblib_progress_update() {
-		pblib_at += $self->{progress_bar}->{interval};
-		if (pblib_at > $self->{progress_bar}->{blocks})
+		if (pblib_at > $self->{progress_bar}->{blocks}){
 			pblib_progress_clear();
-		else {
-			for (var i = 1; i <= Math.ceil(pblib_at); i++)
-				document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).style.backgroundColor = progressColor;\n";
+		} else {
+			for (var i = 1; i <= Math.ceil(pblib_at); i++){
+				document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).className='pblib_block_on';
+			}\n";
 	$html .= "document.".$self->{progress_bar}->{layer_id}->{form}.".".$self->{progress_bar}->{layer_id}->{number}.".value++\n" if $self->{progress_bar}->{label};
-	$html .= "\t\t}\n\t}\n//-->\n</script>\n";
+	$html .= "pblib_at += $self->{progress_bar}->{_interval};
+		}
+	}\n//-->\n</script>\n";
 
 	return $html;
 }
 
-sub CGI::_init_css { my $self = shift;
+sub CGI::_init_css {
+	my ($self, @crud) = CGI::self_or_default;
 	$CSS = "
 	.pblib_bar {
-		width: ".$self->{progress_bar}->{width}." px;
+		border: 1px solid black;
+		padding:    1px;
+		background: white;
+		display: block;
+		text-align:left;
+		width: ".($self->{progress_bar}->{width})."px;
 	}
-	.pblib_block {
-		width: ".($self->{block_wi})."px;
-		height: ".$self->{progress_bar}->{height}."px;
-		margin-right:".$self->{progress_bar}->{gap}."px;
-	}";
+	.pblib_block_on,
+	.pblib_block_off {
+		display: block;
+	".( $self->{progress_bar}->{orientation} eq 'vertical'?
+		"float:none;
+		 width: 100%;
+		 height: ".($self->{progress_bar}->{block_wi})."px;"
+	  : "float:left;
+	     width: ".($self->{progress_bar}->{block_wi})."px;"
+	)."
+	}
+	.pblib_block_off { border:1px solid white; background: white; }
+	.pblib_block_on  { border:1px solid blue;  background: navy; }
+	";
 	if ($self->{progress_bar}->{label}){
 		$CSS .=".pblib_number {
-		border:none;
-		text-align:right
+		text-align: right
+		border: 1px solid transparent;
 		}";
 	}
-	$self->{css} = $CSS;
+	$self->{progress_bar}->{css} = $CSS;
 }
 
 =head1 BUGS, CAVEATS, TODO
@@ -360,8 +407,9 @@ not because I've ever used it, but because it might be cool.
 =item Horizontal orientation only
 
 You can get around this by adjusting the CSS, but you'd rather not.
-And even if you did, the use of C<-label> might not look very nice.
-So the next version will support an C<-orientation> option.
+And even if you did, the use of C<-label> might not look very nice
+unless you did something quite fancy. So the next version (or so)
+will support an C<-orientation> option.
 
 =item Inline CSS and JS
 
@@ -375,13 +423,104 @@ don't fancy.
 1;
 __END__
 
+=head1 CGI UPLOAD HOOK
+
+I'm not convinced it works yet, even in F<CGI.pm> verion 3.15.
+
+If anyone knows otherwise, please mail me: I have spent an hour
+on the below, and it seems that the hook is called more times
+than necessary....
+
+=head2 PROCESS
+
+The script has to both upload and process a file.
+
+The hook script is called when the object is constructed,
+thus before any headers can be output. There the hook needs
+to output its own headers, and we only output headers for
+the 'select file' page when the hook has not been called.
+
+The first tiem the hook is called, then, it outputs HTTP
+headers and begins the page. This is fine.
+
+The next time it is called, it outputs the JS call to
+update the progress bar. This is fine.
+
+The problem is that the hook seems to be called many more
+times than necessary.
+
+=back
+
+=head2 SOURCE
+
+	#!/usr/local/bin/perl
+	use warnings;
+	use strict;
+
+	use CGI::ProgressBar qw/:standard/;
+	$| = 1;	# Do not buffer output
+
+	my $data;
+	my $hook_called;
+	my $cgi = CGI->new(\&bar_hook, $data);
+
+	if (not $hook_called){
+		print $cgi->header,
+		$cgi->start_html( -title=>'A Simple Example', ),
+		$cgi->h1('Simple Upload-hook Example');
+	}
+
+	print $cgi->start_form( -enctype=>'application/x-www-form-urlencoded'),
+		$cgi->filefield( 'uploaded_file'),
+		$cgi->submit,
+		$cgi->end_form,p;
+
+	if ($cgi->param('uploaded_file')){
+		print 'uploaded_file: '.param('uploaded_file');
+	}
+
+
+	sub bar_hook {
+		my ($filename, $buffer, $bytes, $data) = @_;
+		if (not $hook_called){
+			print header,
+			start_html( -title=>'Simple Upload-hook Example', ),
+			h1('Uploading'),
+			p(
+				"Have to read <var>$ENV{CONTENT_LENGTH}</var> in blocks of <var>$bytes</var>, total blocks should be ",
+				($ENV{CONTENT_LENGTH}/$bytes)
+			),
+			progress_bar( -from=>1, -to=>($ENV{CONTENT_LENGTH}/$bytes), -debug=>1 );
+			$hook_called = 1;
+		} else {
+			# Called every $bytes, I would have thought.
+			# But calls seem to go on much longer than $ENV{CONTENT_LENGTH} led me to believe they ought:
+			print update_progress_bar;
+			print "$ENV{CONTENT_LENGTH} ... $total_bytes ... $hook_called ... div="
+			.($hook_called/$total_bytes)
+			."<br>"
+		}
+		sleep 1;
+		$hook_called += $total_bytes;
+	}
+
+	print $cgi->hide_progress_bar;
+	if ($hook_called){
+		print p('All done after '.$hook_called.' calls');
+	}
+	print $cgi->end_html;
+	exit;
+
+
+
+
 =head1 AUTHOR
 
-Lee Goddard <lgoddard -at- cpan -dot- org>
+Lee Goddard C<lgoddard -in- cpan -dat- org>, C<cpan -ut- leegoddard -dut- net>
 
 =head2 COPYRIGHT
 
-Copyright (C) Lee Goddard, 2002-2003. All Rights Reserved.
+Copyright (C) Lee Goddard, 2002, 2003, 2005. All Rights Reserved.
 This software is made available under the same terms as Perl
 itself. You may use and redistribute this software under the
 same terms as Perl itself.
@@ -396,14 +535,10 @@ L<perl>. L<CGI>, L<Tk::ProgressBar>,
 
 =head1 MODIFICATIONS
 
-B<25 March 2004>
+16 December 2005: Updated the styles and POD. Removed I<gap> attribute.
 
-=over 4
+25 March 2004: Updated the POD.
 
-=item *
-
-Updated the POD
-
-=back
+16 December 2005: Updated the default styles.
 
 =cut

@@ -10,11 +10,11 @@ use lib '..';
 use strict;
 
 use Test;
-BEGIN { plan tests => 11, todo => [9,] };
+BEGIN { plan tests => 11, };
 use CGI::ProgressBar qw/:standard/;
 ok(1); # If we made it this far, we're ok.
 
-die "Old verseion" if $CGI::ProgressBar::VERSION != "0.03";
+die "Old verseion" if $CGI::ProgressBar::VERSION != "0.04";
 
 #goto TEST11; #############
 
@@ -36,14 +36,12 @@ my $html = progress_bar( from=>10 );
 ok (defined $html, 1);
 
 # 8
+
 $query = new CGI::ProgressBar;
-$html = progress_bar( blocks=>20 );
+$html = $query->progress_bar( blocks=>20 );
 ok (defined $html, 1);
 
-#
-# TODO
-# 9 - does CGI make {progress_bar} inaccessible?
-#
+# 9 TODO
 ok( $query->{progress_bar}->{blocks}, 20);
 
 # 10
