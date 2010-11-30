@@ -1,3 +1,6 @@
+use strict;
+use warnings;
+
 package CGI::ProgressBar;
 
 =head1 NAME
@@ -35,19 +38,17 @@ CGI::ProgressBar - CGI.pm sub-class with a progress bar object
 
 =head1 DESCRIPTION
 
-This module provides a progress bar for web browsers, to keep end-users occupied when otherwise
+This module provides an HTML/JS progress bar for web browsers, to keep end-users occupied when otherwise
 nothing would appear to be happening.
 
 It aims to require that the recipient client have a minimum
-of JavaScript 1.0, HTML 4.0, ancd CSS/1, but this has yet to be tested.
+of JavaScript 1.0, HTML 4.0, and CSS/1.
 
 All feedback would be most welcome. Address at the end of the POD.
 
 =cut
 
 use 5.004;
-use strict;
-use warnings;
 
 =head2 DEPENDENCIES
 
@@ -55,8 +56,9 @@ use warnings;
 
 =cut
 
+our $VERSION = '0.05';
+
 BEGIN {
-	our $VERSION = '0.04';
 	use CGI::Util; # qw(rearrange);
 	use base 'CGI';
 
@@ -217,7 +219,7 @@ sub progress_bar {
 	$pb->{_length}	= $pb->{to} - $pb->{from};	# Units in the bar
 	$pb->{_interval} = 1;	# publicise?
 #	$pb->{_interval} = $pb->{_length}>0? ($pb->{_length}/$pb->{blocks}) : 0;
-
+ 	$pb->{block_wi} = int( $pb->{width} / $pb->{blocks} ) -2;
 	# IN A LATER VERSION....Store ourself in caller's progress_bar array
 	# push @{ $self->{progress_bar} },$pb;
 	$self->{progress_bar} = $pb;
@@ -322,7 +324,7 @@ sub CGI::_pb_init {
 	$html .= "</td></tr>\n<tr><td align='center'>
 		<form name='$self->{progress_bar}->{layer_id}->{form}' action='noneEver'>
 			<input name='$self->{progress_bar}->{layer_id}->{number}' type='text' size='6' value='0' class='pblib_number'
-			/><span class='pblib_number'>/$self->{progress_bar}->{to}</span>
+			/><span class='pblib_number'> / $self->{progress_bar}->{to}</span>
 		</form>
 		</td></tr></table>
 		</td></tr></table>" if $self->{progress_bar}->{label};
@@ -339,6 +341,7 @@ sub CGI::_pb_init {
 		pblib_at = ".($self->{progress_bar}->{from}).";
 	}
 	function pblib_progress_update() {
+		pblib_at += $self->{progress_bar}->{_interval};
 		if (pblib_at > $self->{progress_bar}->{blocks}){
 			pblib_progress_clear();
 		} else {
@@ -346,9 +349,7 @@ sub CGI::_pb_init {
 				document.getElementById('$self->{progress_bar}->{layer_id}->{block}'+i).className='pblib_block_on';
 			}\n";
 	$html .= "document.".$self->{progress_bar}->{layer_id}->{form}.".".$self->{progress_bar}->{layer_id}->{number}.".value++\n" if $self->{progress_bar}->{label};
-	$html .= "pblib_at += $self->{progress_bar}->{_interval};
-		}
-	}\n//-->\n</script>\n";
+	$html .= "}\n//-->\n</script>\n";
 
 	return $html;
 }
@@ -380,7 +381,7 @@ sub CGI::_init_css {
 	";
 	if ($self->{progress_bar}->{label}){
 		$CSS .=".pblib_number {
-		text-align: right
+		text-align: right;
 		border: 1px solid transparent;
 		}";
 	}
@@ -535,10 +536,13 @@ L<perl>. L<CGI>, L<Tk::ProgressBar>,
 
 =head1 MODIFICATIONS
 
+25 March 2004: Updated the POD.^
+
 16 December 2005: Updated the styles and POD. Removed I<gap> attribute.
 
-25 March 2004: Updated the POD.
-
 16 December 2005: Updated the default styles.
+
+30 November 2010: Updated with patch from I<tlhackque> - thank you.
+
 
 =cut

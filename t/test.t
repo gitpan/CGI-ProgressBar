@@ -1,7 +1,5 @@
 #! perl -w
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl test.pl'
-
+# TODO bother to update this
 #########################
 
 # change 'tests => 1' to 'tests => last_test_to_print';
@@ -10,11 +8,11 @@ use lib '..';
 use strict;
 
 use Test;
-BEGIN { plan tests => 11, };
+BEGIN { plan tests => 12 };
 use CGI::ProgressBar qw/:standard/;
 ok(1); # If we made it this far, we're ok.
 
-die "Old verseion" if $CGI::ProgressBar::VERSION != "0.04";
+die "Old version" if $CGI::ProgressBar::VERSION != "0.05";
 
 #goto TEST11; #############
 
